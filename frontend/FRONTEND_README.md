@@ -236,7 +236,6 @@ frontend/
 - ✅ index.tsx entry point
 - ✅ Basic structure
 
-### 🔨 To Be Implemented (Optional Enhancements)
 
 **Task Management:**
 - TaskList component

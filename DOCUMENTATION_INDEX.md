@@ -487,7 +487,7 @@ curl http://localhost:5000/api/tasks \
 - ✅ Security features
 - ✅ API documentation (Markdown + Postman)
 
-### Frontend: ⚙️ 60% Complete (Core Features)
+### Frontend: ⚙️(Core Features)
 
 **Completed:**
 - ✅ Project setup
