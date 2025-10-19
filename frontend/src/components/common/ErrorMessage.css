@@ -1,0 +1,32 @@
+.error-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-2xl);
+  text-align: center;
+}
+
+.error-icon {
+  font-size: 48px;
+  margin-bottom: var(--spacing-lg);
+}
+
+.error-message-text {
+  color: var(--danger);
+  font-size: var(--font-size-base);
+  margin-bottom: var(--spacing-lg);
+}
+
+.error-retry-btn {
+  padding: var(--spacing-md) var(--spacing-xl);
+  background-color: var(--danger);
+  color: var(--white);
+  border-radius: var(--border-radius-sm);
+  font-weight: var(--font-weight-medium);
+  transition: background-color var(--transition-base);
+}
+
+.error-retry-btn:hover {
+  background-color: var(--danger-hover);
+}

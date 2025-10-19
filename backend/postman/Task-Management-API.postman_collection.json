@@ -1,0 +1,1581 @@
+{
+	"info": {
+		"_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+		"name": "Task Management API",
+		"description": "Comprehensive API documentation for the Task Management System. This collection includes all endpoints for authentication, task management, comments, file uploads, and analytics.\n\n## Getting Started\n\n1. Import this collection into Postman\n2. Import the environment file (Task-Management-Environment.json)\n3. Update the `base_url` in the environment to match your server (default: http://localhost:5000)\n4. Start with the \"Register User\" or \"Login User\" request to get authentication tokens\n5. Tokens will be automatically saved to environment variables\n\n## Authentication\n\nMost endpoints require authentication. The access token is automatically set after login/register and included in the Authorization header.\n\n## Features\n\n- User Authentication (JWT + Refresh Token)\n- Task CRUD with soft delete\n- Comments system\n- File uploads (up to 10MB per file)\n- Analytics and reporting\n- Export data (CSV/JSON)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Register User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Save tokens to environment",
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set(\"access_token\", response.data.accessToken);",
+									"    pm.environment.set(\"refresh_token\", response.data.refreshToken);",
+									"    pm.environment.set(\"user_id\", response.data.user.id);",
+									"    console.log(\"✅ Tokens saved to environment\");",
+									"}",
+									"",
+									"// Test response structure",
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Response has success field\", function () {",
+									"    pm.expect(pm.response.json()).to.have.property('success', true);",
+									"});",
+									"",
+									"pm.test(\"Response contains user data\", function () {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response.data).to.have.property('user');",
+									"    pm.expect(response.data.user).to.have.property('id');",
+									"    pm.expect(response.data.user).to.have.property('name');",
+									"    pm.expect(response.data.user).to.have.property('email');",
+									"});",
+									"",
+									"pm.test(\"Response contains tokens\", function () {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response.data).to.have.property('accessToken');",
+									"    pm.expect(response.data).to.have.property('refreshToken');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"SecurePass123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/register",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"register"
+							]
+						},
+						"description": "Register a new user account.\n\n**Request Body:**\n- `name` (string, required): 2-50 characters\n- `email` (string, required): Valid email format\n- `password` (string, required): Minimum 8 characters, must contain uppercase, lowercase, and number\n\n**Response:**\n- Returns user object with id, name, email, createdAt\n- Returns accessToken (15 min expiry) and refreshToken (7 days expiry)\n\n**Rate Limit:** 5 requests per 15 minutes"
+					},
+					"response": []
+				},
+				{
+					"name": "Login User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Save tokens to environment",
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set(\"access_token\", response.data.accessToken);",
+									"    pm.environment.set(\"refresh_token\", response.data.refreshToken);",
+									"    pm.environment.set(\"user_id\", response.data.user.id);",
+									"    console.log(\"✅ Tokens saved to environment\");",
+									"}",
+									"",
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Login successful\", function () {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('success', true);",
+									"    pm.expect(response.data).to.have.property('accessToken');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"SecurePass123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"description": "Login with email and password.\n\n**Request Body:**\n- `email` (string, required)\n- `password` (string, required)\n\n**Response:**\n- Returns user object and authentication tokens\n\n**Rate Limit:** 5 requests per 15 minutes"
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Access Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set(\"access_token\", response.data.accessToken);",
+									"    pm.environment.set(\"refresh_token\", response.data.refreshToken);",
+									"    console.log(\"✅ New tokens saved to environment\");",
+									"}",
+									"",
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/refresh",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"refresh"
+							]
+						},
+						"description": "Refresh expired access token using refresh token.\n\n**Request Body:**\n- `refreshToken` (string, required)\n\n**Response:**\n- Returns new accessToken and refreshToken\n- Old refresh token is deleted from database"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Current User Profile",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"User profile returned\", function () {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response.data).to.have.property('id');",
+									"    pm.expect(response.data).to.have.property('email');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/auth/me",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"me"
+							]
+						},
+						"description": "Get the current authenticated user's profile.\n\n**Authentication:** Required (Bearer token)\n\n**Response:**\n- Returns user object with id, name, email, createdAt"
+					},
+					"response": []
+				},
+				{
+					"name": "Logout User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"// Clear tokens from environment",
+									"if (pm.response.code === 200) {",
+									"    pm.environment.unset(\"access_token\");",
+									"    pm.environment.unset(\"refresh_token\");",
+									"    console.log(\"✅ Tokens cleared from environment\");",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/logout",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"logout"
+							]
+						},
+						"description": "Logout user by deleting refresh token from database.\n\n**Request Body:**\n- `refreshToken` (string, required)\n\n**Response:**\n- Success message"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Profile",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Profile updated\", function () {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('success', true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"John Smith\",\n  \"email\": \"john.smith@example.com\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/profile",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"profile"
+							]
+						},
+						"description": "Update user profile information.\n\n**Authentication:** Required\n\n**Request Body:**\n- `name` (string, required): 2-50 characters\n- `email` (string, required): Valid email format\n\n**Response:**\n- Returns updated user object"
+					},
+					"response": []
+				},
+				{
+					"name": "Change Password",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Password changed successfully\", function () {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('success', true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"currentPassword\": \"SecurePass123\",\n  \"newPassword\": \"NewSecurePass456\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/password",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"password"
+							]
+						},
+						"description": "Change user password.\n\n**Authentication:** Required\n\n**Request Body:**\n- `currentPassword` (string, required)\n- `newPassword` (string, required): Min 8 chars, must contain uppercase, lowercase, and number\n\n**Note:** All refresh tokens are invalidated after password change"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints for user authentication including registration, login, token refresh, and profile management."
+		},
+		{
+			"name": "Tasks",
+			"item": [
+				{
+					"name": "Create Task",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set(\"task_id\", response.data._id);",
+									"    console.log(\"✅ Task ID saved to environment:\", response.data._id);",
+									"}",
+									"",
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Task created successfully\", function () {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('success', true);",
+									"    pm.expect(response.data).to.have.property('_id');",
+									"    pm.expect(response.data).to.have.property('title');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Implement user authentication\",\n  \"description\": \"Add JWT-based authentication with refresh tokens for the API\",\n  \"status\": \"todo\",\n  \"priority\": \"high\",\n  \"due_date\": \"2025-12-31T23:59:59.000Z\",\n  \"tags\": [\"backend\", \"security\", \"authentication\"],\n  \"assigned_to\": null\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/tasks",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"tasks"
+							]
+						},
+						"description": "Create a new task.\n\n**Authentication:** Required\n\n**Request Body:**\n- `title` (string, required): 3-200 characters\n- `description` (string, optional): Max 2000 characters\n- `status` (string, optional): 'todo' | 'in_progress' | 'completed' (default: 'todo')\n- `priority` (string, optional): 'low' | 'medium' | 'high' | 'critical' (default: 'medium')\n- `due_date` (string, optional): ISO8601 date format\n- `tags` (array, optional): Array of strings (each 1-50 chars)\n- `assigned_to` (string, optional): User ID\n\n**Response:**\n- Returns created task object with populated creator and assignee"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Tasks",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has pagination\", function () {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('pagination');",
+									"    pm.expect(response.pagination).to.have.property('total');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/tasks?page=1&limit=10&status=todo&priority=high&search=authentication",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"tasks"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Page number (default: 1)"
+								},
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Items per page (default: 10, max: 100)"
+								},
+								{
+									"key": "status",
+									"value": "todo",
+									"description": "Filter by status: todo, in_progress, completed",
+									"disabled": true
+								},
+								{
+									"key": "priority",
+									"value": "high",
+									"description": "Filter by priority: low, medium, high, critical",
+									"disabled": true
+								},
+								{
+									"key": "assigned_to",
+									"value": "",
+									"description": "Filter by assigned user ID",
+									"disabled": true
+								},
+								{
+									"key": "created_by",
+									"value": "",
+									"description": "Filter by creator user ID",
+									"disabled": true
+								},
+								{
+									"key": "tags",
+									"value": "backend,security",
+									"description": "Filter by tags (comma-separated)",
+									"disabled": true
+								},
+								{
+									"key": "search",
+									"value": "authentication",
+									"description": "Full-text search on title and description",
+									"disabled": true
+								},
+								{
+									"key": "sort",
+									"value": "-createdAt",
+									"description": "Sort field (default: -createdAt)",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get all tasks with optional filtering, searching, sorting, and pagination.\n\n**Authentication:** Required\n\n**Query Parameters:**\n- `page` (number): Page number (default: 1)\n- `limit` (number): Items per page (1-100, default: 10)\n- `status` (string): Filter by status\n- `priority` (string): Filter by priority\n- `assigned_to` (string): Filter by assigned user ID\n- `created_by` (string): Filter by creator user ID\n- `tags` (string): Comma-separated tags\n- `search` (string): Full-text search on title/description\n- `sort` (string): Sort field (prefix with - for descending)\n\n**Response:**\n- Returns array of tasks with pagination metadata"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Task by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Task details returned\", function () {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response.data).to.have.property('_id');",
+									"    pm.expect(response.data).to.have.property('title');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/tasks/{{task_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"tasks",
+								"{{task_id}}"
+							]
+						},
+						"description": "Get a single task by ID.\n\n**Authentication:** Required\n\n**URL Parameters:**\n- `id` (string, required): Task ID (MongoDB ObjectId)\n\n**Response:**\n- Returns task object with populated creator and assignee"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Task",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Task updated successfully\", function () {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('success', true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"in_progress\",\n  \"priority\": \"critical\",\n  \"description\": \"Updated description with more details\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/tasks/{{task_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"tasks",
+								"{{task_id}}"
+							]
+						},
+						"description": "Update an existing task.\n\n**Authentication:** Required\n\n**Authorization:** Only task creator or assigned user can update\n\n**URL Parameters:**\n- `id` (string, required): Task ID\n\n**Request Body:** (all fields optional)\n- `title` (string): 3-200 characters\n- `description` (string): Max 2000 characters\n- `status` (string): 'todo' | 'in_progress' | 'completed'\n- `priority` (string): 'low' | 'medium' | 'high' | 'critical'\n- `due_date` (string): ISO8601 date\n- `tags` (array): Array of strings\n- `assigned_to` (string): User ID\n\n**Response:**\n- Returns updated task object"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Task (Soft Delete)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Task deleted successfully\", function () {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('success', true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/tasks/{{task_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"tasks",
+								"{{task_id}}"
+							]
+						},
+						"description": "Soft delete a task (sets is_deleted flag to true).\n\n**Authentication:** Required\n\n**Authorization:** Only task creator can delete\n\n**URL Parameters:**\n- `id` (string, required): Task ID\n\n**Note:** This is a soft delete - the task is marked as deleted but not removed from database.\n\n**Response:**\n- Success message"
+					},
+					"response": []
+				},
+				{
+					"name": "Bulk Create Tasks",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Multiple tasks created\", function () {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response.data).to.be.an('array');",
+									"    pm.expect(response.data.length).to.be.greaterThan(0);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"tasks\": [\n    {\n      \"title\": \"Design database schema\",\n      \"description\": \"Create MongoDB schema for all collections\",\n      \"priority\": \"high\",\n      \"tags\": [\"database\", \"planning\"]\n    },\n    {\n      \"title\": \"Setup API routes\",\n      \"description\": \"Implement REST API routes for all endpoints\",\n      \"priority\": \"medium\",\n      \"tags\": [\"backend\", \"api\"]\n    },\n    {\n      \"title\": \"Write unit tests\",\n      \"description\": \"Add comprehensive test coverage\",\n      \"priority\": \"medium\",\n      \"tags\": [\"testing\", \"quality\"]\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/tasks/bulk",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"tasks",
+								"bulk"
+							]
+						},
+						"description": "Create multiple tasks at once.\n\n**Authentication:** Required\n\n**Request Body:**\n- `tasks` (array, required): Non-empty array of task objects\n- Each task must have at least a `title` (3-200 characters)\n- All other task fields are optional (description, status, priority, due_date, tags, assigned_to)\n\n**Response:**\n- Returns array of created task objects with populated references"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints for task management including CRUD operations, filtering, searching, and bulk creation."
+		},
+		{
+			"name": "Comments",
+			"item": [
+				{
+					"name": "Add Comment to Task",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set(\"comment_id\", response.data._id);",
+									"    console.log(\"✅ Comment ID saved to environment:\", response.data._id);",
+									"}",
+									"",
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Comment added successfully\", function () {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response.data).to.have.property('_id');",
+									"    pm.expect(response.data).to.have.property('content');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"content\": \"This task is now in progress. I've started working on the authentication module.\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/tasks/{{task_id}}/comments",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"tasks",
+								"{{task_id}}",
+								"comments"
+							]
+						},
+						"description": "Add a comment to a task.\n\n**Authentication:** Required\n\n**URL Parameters:**\n- `id` (string, required): Task ID\n\n**Request Body:**\n- `content` (string, required): 1-1000 characters\n\n**Response:**\n- Returns created comment with populated user information"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Task Comments",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Comments returned with pagination\", function () {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('pagination');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/tasks/{{task_id}}/comments?page=1&limit=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"tasks",
+								"{{task_id}}",
+								"comments"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Page number (default: 1)"
+								},
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Items per page (default: 10)"
+								}
+							]
+						},
+						"description": "Get all comments for a specific task.\n\n**Authentication:** Required\n\n**URL Parameters:**\n- `id` (string, required): Task ID\n\n**Query Parameters:**\n- `page` (number): Page number (default: 1)\n- `limit` (number): Items per page (default: 10)\n\n**Response:**\n- Returns array of comments with populated user info and pagination metadata\n- Sorted by creation date (newest first)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Comment",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Comment updated successfully\", function () {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('success', true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"content\": \"Updated comment: The authentication module is now complete and tested.\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/comments/{{comment_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"comments",
+								"{{comment_id}}"
+							]
+						},
+						"description": "Update an existing comment.\n\n**Authentication:** Required\n\n**Authorization:** Only comment author can update\n\n**URL Parameters:**\n- `id` (string, required): Comment ID\n\n**Request Body:**\n- `content` (string, required): 1-1000 characters\n\n**Response:**\n- Returns updated comment with populated user information"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Comment",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Comment deleted successfully\", function () {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('success', true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/comments/{{comment_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"comments",
+								"{{comment_id}}"
+							]
+						},
+						"description": "Delete a comment.\n\n**Authentication:** Required\n\n**Authorization:** Only comment author can delete\n\n**URL Parameters:**\n- `id` (string, required): Comment ID\n\n**Response:**\n- Success message"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints for managing comments on tasks including create, read, update, and delete operations."
+		},
+		{
+			"name": "Files",
+			"item": [
+				{
+					"name": "Upload Files to Task",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.length > 0) {",
+									"        pm.environment.set(\"file_id\", response.data[0]._id);",
+									"        console.log(\"✅ File ID saved to environment:\", response.data[0]._id);",
+									"    }",
+									"}",
+									"",
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Files uploaded successfully\", function () {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response.data).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "files",
+									"type": "file",
+									"src": [],
+									"description": "Select files to upload (max 10 files, 10MB each)"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/tasks/{{task_id}}/files",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"tasks",
+								"{{task_id}}",
+								"files"
+							]
+						},
+						"description": "Upload files to a task.\n\n**Authentication:** Required\n\n**URL Parameters:**\n- `id` (string, required): Task ID\n\n**Request Body:** (multipart/form-data)\n- `files` (file, required): Select one or more files to upload\n\n**File Restrictions:**\n- Max file size: 10MB per file\n- Max files per request: 10\n- Allowed types: PDF, DOC, DOCX, TXT, JPG, JPEG, PNG, GIF\n\n**Rate Limit:** 10 uploads per hour\n\n**Response:**\n- Returns array of uploaded file objects with metadata"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Files for Task",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Files list returned\", function () {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('data');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/tasks/{{task_id}}/files",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"tasks",
+								"{{task_id}}",
+								"files"
+							]
+						},
+						"description": "Get all files associated with a task.\n\n**Authentication:** Required\n\n**URL Parameters:**\n- `id` (string, required): Task ID\n\n**Response:**\n- Returns array of file objects with metadata (filename, size, type, uploader, etc.)"
+					},
+					"response": []
+				},
+				{
+					"name": "Download File",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"File content returned\", function () {",
+									"    pm.expect(pm.response.headers.get('Content-Type')).to.exist;",
+									"    pm.expect(pm.response.headers.get('Content-Disposition')).to.exist;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/files/{{file_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"files",
+								"{{file_id}}"
+							]
+						},
+						"description": "Download a file by ID.\n\n**Authentication:** Required\n\n**URL Parameters:**\n- `id` (string, required): File ID\n\n**Response:**\n- Returns file content as a stream\n- Sets appropriate Content-Type and Content-Disposition headers\n- File will download with original filename"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete File",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"File deleted successfully\", function () {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('success', true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/files/{{file_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"files",
+								"{{file_id}}"
+							]
+						},
+						"description": "Delete a file.\n\n**Authentication:** Required\n\n**Authorization:** Only file uploader or task creator can delete\n\n**URL Parameters:**\n- `id` (string, required): File ID\n\n**Response:**\n- Success message\n- File is deleted from both MinIO storage and database"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints for file management including upload, download, and delete operations with MinIO storage."
+		},
+		{
+			"name": "Analytics",
+			"item": [
+				{
+					"name": "Task Overview Statistics",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Overview statistics returned\", function () {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response.data).to.have.property('total');",
+									"    pm.expect(response.data).to.have.property('byStatus');",
+									"    pm.expect(response.data).to.have.property('byPriority');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/analytics/overview",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"analytics",
+								"overview"
+							]
+						},
+						"description": "Get task overview statistics for the current user.\n\n**Authentication:** Required\n\n**Response:**\n- `total`: Total number of tasks\n- `byStatus`: Count of tasks grouped by status (todo, in_progress, completed)\n- `byPriority`: Count of tasks grouped by priority (low, medium, high, critical)\n- `completed`: Number of completed tasks\n- `overdue`: Number of overdue tasks (past due_date)"
+					},
+					"response": []
+				},
+				{
+					"name": "User Performance Metrics",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Performance metrics returned\", function () {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response.data).to.have.property('tasksCreated');",
+									"    pm.expect(response.data).to.have.property('tasksAssigned');",
+									"    pm.expect(response.data).to.have.property('completionRate');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/analytics/user-performance",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"analytics",
+								"user-performance"
+							]
+						},
+						"description": "Get performance metrics for the current user.\n\n**Authentication:** Required\n\n**Response:**\n- `tasksCreated`: Number of tasks created by user\n- `tasksAssigned`: Number of tasks assigned to user\n- `tasksCompleted`: Number of completed tasks\n- `completionRate`: Percentage of completed tasks\n- `averageCompletionTime`: Average days to complete tasks\n- `tasksByPriority`: Distribution of tasks by priority level"
+					},
+					"response": []
+				},
+				{
+					"name": "Task Trends Over Time",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Trends data returned\", function () {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response.data).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/analytics/trends?period=week&start_date=2025-01-01T00:00:00.000Z&end_date=2025-12-31T23:59:59.000Z",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"analytics",
+								"trends"
+							],
+							"query": [
+								{
+									"key": "period",
+									"value": "week",
+									"description": "Time period: 'day' | 'week' | 'month' (default: week)"
+								},
+								{
+									"key": "start_date",
+									"value": "2025-01-01T00:00:00.000Z",
+									"description": "Start date (ISO8601 format, optional)"
+								},
+								{
+									"key": "end_date",
+									"value": "2025-12-31T23:59:59.000Z",
+									"description": "End date (ISO8601 format, optional)"
+								}
+							]
+						},
+						"description": "Get task trends over time for the current user.\n\n**Authentication:** Required\n\n**Query Parameters:**\n- `period` (string, optional): 'day' | 'week' | 'month' (default: 'week')\n- `start_date` (string, optional): ISO8601 date format\n- `end_date` (string, optional): ISO8601 date format\n\n**Response:**\n- Returns array of trend data points\n- Each data point contains:\n  - `date`: Period identifier\n  - `created`: Number of tasks created in that period\n  - `completed`: Number of tasks completed in that period"
+					},
+					"response": []
+				},
+				{
+					"name": "Export Tasks Data",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Export data returned\", function () {",
+									"    const contentType = pm.response.headers.get('Content-Type');",
+									"    const format = pm.request.url.query.get('format') || 'json';",
+									"    ",
+									"    if (format === 'csv') {",
+									"        pm.expect(contentType).to.include('text/csv');",
+									"    } else {",
+									"        pm.expect(contentType).to.include('application/json');",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/analytics/export?format=json&status=completed&priority=high",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"analytics",
+								"export"
+							],
+							"query": [
+								{
+									"key": "format",
+									"value": "json",
+									"description": "Export format: 'csv' | 'json' (default: json)"
+								},
+								{
+									"key": "status",
+									"value": "completed",
+									"description": "Filter by status (optional)",
+									"disabled": true
+								},
+								{
+									"key": "priority",
+									"value": "high",
+									"description": "Filter by priority (optional)",
+									"disabled": true
+								},
+								{
+									"key": "start_date",
+									"value": "2025-01-01T00:00:00.000Z",
+									"description": "Start date filter (ISO8601, optional)",
+									"disabled": true
+								},
+								{
+									"key": "end_date",
+									"value": "2025-12-31T23:59:59.000Z",
+									"description": "End date filter (ISO8601, optional)",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Export tasks data in CSV or JSON format.\n\n**Authentication:** Required\n\n**Query Parameters:**\n- `format` (string, optional): 'csv' | 'json' (default: 'json')\n- `status` (string, optional): Filter by status\n- `priority` (string, optional): Filter by priority\n- `start_date` (string, optional): Filter by start date (ISO8601)\n- `end_date` (string, optional): Filter by end date (ISO8601)\n\n**Response:**\n- CSV format: Returns CSV file with headers (Title, Description, Status, Priority, Due Date, Tags, Assigned To, Created By, Created At)\n- JSON format: Returns JSON array of task objects\n- Sets Content-Disposition header for file download"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints for analytics and reporting including task statistics, user performance metrics, trends, and data export."
+		},
+		{
+			"name": "Health Check",
+			"item": [
+				{
+					"name": "Health Check",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Server is healthy\", function () {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('success', true);",
+									"    pm.expect(response.message).to.equal('Server is healthy');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/health",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"health"
+							]
+						},
+						"description": "Check if the server is running and healthy.\n\n**Authentication:** Not required\n\n**Response:**\n- Returns success status and timestamp"
+					},
+					"response": []
+				}
+			],
+			"description": "Server health check endpoint to verify the API is running."
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Global pre-request script",
+					"console.log('Making request to:', pm.request.url.toString());"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Global test script",
+					"pm.test(\"Response time is less than 5000ms\", function () {",
+					"    pm.expect(pm.response.responseTime).to.be.below(5000);",
+					"});",
+					"",
+					"pm.test(\"Response has valid JSON structure\", function () {",
+					"    const contentType = pm.response.headers.get('Content-Type');",
+					"    if (contentType && contentType.includes('application/json')) {",
+					"        pm.response.to.be.json;",
+					"    }",
+					"});"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:5000",
+			"type": "string"
+		}
+	]
+}

@@ -1,0 +1,25 @@
+.layout {
+  min-height: 100vh;
+  background: var(--color-background-secondary);
+}
+
+.main-content {
+  margin-left: 240px;
+  margin-top: 64px;
+  padding: var(--spacing-lg);
+  min-height: calc(100vh - 64px);
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 60px;
+    padding: var(--spacing-md);
+  }
+}
+
+@media (max-width: 480px) {
+  .main-content {
+    margin-left: 0;
+    padding: var(--spacing-sm);
+  }
+}

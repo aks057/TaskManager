@@ -1,0 +1,46 @@
+.file-upload {
+  border: 2px dashed var(--color-border);
+  border-radius: var(--border-radius-lg);
+  padding: var(--spacing-2xl);
+  text-align: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  background: var(--color-background-secondary);
+}
+
+.file-upload:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.file-upload.dragging {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+  transform: scale(1.02);
+}
+
+.file-upload-icon {
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-md);
+}
+
+.file-upload.dragging .file-upload-icon,
+.file-upload:hover .file-upload-icon {
+  color: var(--color-primary);
+}
+
+.file-upload-text {
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
+  margin: 0 0 var(--spacing-xs) 0;
+}
+
+.file-upload-text strong {
+  color: var(--color-primary);
+}
+
+.file-upload-hint {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin: 0;
+}
